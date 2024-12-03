@@ -14,10 +14,10 @@ class Apollo11:
 		self.StartingVelocity = V0y
 		self.EndVelocity = V_end
 
-	def HeightGraphic(self, _0_t0, t0_t, H1, H2):
+	def HeightGraphic(self, _0_t0, _t0_t, H1, H2):
 		fig, ax = plt.subplots(figsize=(8, 10))
 		ax.plot(_0_t0, H1, color='black', label='Высота (без двигателя)')
-		ax.plot(t0_t, H2, color='orange', label='Высота (с двигателем)')
+		ax.plot(_t0_t, H2, color='orange', label='Высота (с двигателем)')
 		ax.axhline(0, color='black', lw=0.5)
 		ax.set_xlabel('Время (с)')
 		ax.set_ylabel('Высота (м)')
@@ -26,10 +26,10 @@ class Apollo11:
 		ax.grid(True)
 		plt.show()
 
-	def AccelerationGraphic(self, _0_t0, t0_t, a1, a2):
+	def AccelerationGraphic(self, _0_t0, _t0_t, a1, a2):
 		fig, ax = plt.subplots(figsize=(8, 10))
 		ax.plot(_0_t0, a1, color='black', label='Ускорение (без двигателя)')
-		ax.plot(t0_t, a2, color='orange', label='Ускорение (с двигателем)')
+		ax.plot(_t0_t, a2, color='orange', label='Ускорение (с двигателем)')
 		ax.axhline(0, color='black', lw=0.5)
 		ax.set_xlabel('Время (с)')
 		ax.set_ylabel('Ускорение (м/с²)')
@@ -38,10 +38,10 @@ class Apollo11:
 		ax.grid(True)
 		plt.show()
 
-	def VelocityGraphic(self, _0_t0, t0_t, V1, V2):
+	def VelocityGraphic(self, _0_t0, _t0_t, V1, V2):
 		fig, ax = plt.subplots(figsize=(8, 10))
 		ax.plot(_0_t0, V1, color='black', label='Скорость (без двигателя)')
-		ax.plot(t0_t, V2, color='orange', label='Скорость (с двигателем)')
+		ax.plot(_t0_t, V2, color='orange', label='Скорость (с двигателем)')
 		ax.set_xlabel('Время (с)')
 		ax.set_ylabel('Скорость (м/с)')
 		ax.set_title('Зависимость вертикальной скорости от времени')
@@ -57,11 +57,8 @@ class Apollo11:
 		# Находим время, при котором H = 0, решая квадратное уравнение
 		t_end = (-self.StartingVelocity + (self.StartingVelocity ** 2 + 2 * g * self.StartingHeight) ** 0.5) / g
 
-		left_t0 = 0
-		right_t0 = t_end
-
 		# Поиск времени запуска двигателя
-		for t0 in np.arange(left_t0, right_t0, dt):
+		for t0 in np.arange(0, t_end, dt):
 			# Высота
 			H1 = self.StartingHeight - self.StartingVelocity * t0 - 0.5 * g * t0 ** 2
 
@@ -76,6 +73,7 @@ class Apollo11:
 			# Найдем t
 			delta_t = t_max
 			H2 = (H1 - V1 * delta_t - g * delta_t ** 2 / 2 + self.FuelSpeed * delta_t + self.FuelSpeed * self.ApolloMass / self.Consumption * (1 - self.Consumption * delta_t / self.ApolloMass) * np.log(1 - self.Consumption * delta_t / self.ApolloMass))
+			
 			if(H2 > 0):
 				continue
 
@@ -87,7 +85,7 @@ class Apollo11:
 
 				if delta_t > 0:
 					H2 = (H1 - V1 * delta_t - g * delta_t ** 2 / 2 + self.FuelSpeed * delta_t + self.FuelSpeed * self.ApolloMass / self.Consumption * (1 - self.Consumption * delta_t / self.ApolloMass) * np.log(1 - self.Consumption * delta_t / self.ApolloMass))
-					V2 = V1 - self.FuelSpeed * np.log(self.ApolloMass / (self.ApolloMass - self.Consumption * delta_t)) + g * delta_t
+					V2 = V1 + g * delta_t - self.FuelSpeed * np.log(self.ApolloMass / (self.ApolloMass - self.Consumption * delta_t))
 
 					if H2 <= 0 and abs(V2) <= self.EndVelocity:
 						found = True
@@ -107,27 +105,31 @@ class Apollo11:
 		# Время от 0 до включения двигателя
 		_0_t0 = np.linspace(0, t0, 100)
 		# Время от включения двигателя до посадки
-		t0_t = np.linspace(t0, t, 100)
-		# Высота (путь) от начала до времени включения двигателя
-		H1 = self.StartingHeight - self.StartingVelocity * _0_t0 - 0.5 * g * _0_t0 ** 2
-		# Скорость от начала до включения двигателя
-		V1 = self.StartingVelocity + g * _0_t0
+		_t0_t = np.linspace(t0, t, 100)
+
 		# Ускорение до включения двигателя
 		a1 = np.full_like(_0_t0, g)
+		# Скорость от начала до включения двигателя
+		V1 = self.StartingVelocity + g * _0_t0
+		# Высота (путь) от начала до времени включения двигателя
+		H1 = self.StartingHeight - self.StartingVelocity * _0_t0 - 0.5 * g * _0_t0 ** 2
 
 		# Cкорость во время включения двигателя
 		V = self.StartingVelocity + g * t0
 
-		a2 = g - (self.Consumption * self.FuelSpeed) / (self.ApolloMass - self.Consumption * (t0_t - t0))
-		V2 = (V - self.FuelSpeed * np.log(self.ApolloMass / (self.ApolloMass - self.Consumption * (t0_t - t0))) + g * (t0_t - t0))
-		H2 = (H1[-1] - V1[-1] * (t0_t - t0) - g * (t0_t - t0) ** 2 / 2 + self.FuelSpeed * (t0_t - t0) + self.FuelSpeed * self.ApolloMass / self.Consumption * (1 - self.Consumption * (t0_t - t0) / self.ApolloMass) * np.log(1 - self.Consumption * (t0_t - t0) / self.ApolloMass))
+		# Ускорение после включения двигателя
+		a2 = g - (self.Consumption * self.FuelSpeed) / (self.ApolloMass - self.Consumption * (_t0_t - t0))
+		# Скорость после включения двигателя
+		V2 = (V - self.FuelSpeed * np.log(self.ApolloMass / (self.ApolloMass - self.Consumption * (_t0_t - t0))) + g * (_t0_t - t0))
+		# Высота (путь)  после включения двигателя
+		H2 = (H1[-1] - V1[-1] * (_t0_t - t0) - g * (_t0_t - t0) ** 2 / 2 + self.FuelSpeed * (_t0_t - t0) + self.FuelSpeed * self.ApolloMass / self.Consumption * (1 - self.Consumption * (_t0_t - t0) / self.ApolloMass) * np.log(1 - self.Consumption * (_t0_t - t0) / self.ApolloMass))
 
 		print(f"Вертикальная скорость при h = 0 равна: {V2[-1]}")
 		print(f"Необходимая высота для включения двигателя равна {H1[-1]}")
 
-		self.HeightGraphic(_0_t0, t0_t, H1, H2)
-		self.AccelerationGraphic(_0_t0, t0_t, a1, a2)
-		self.VelocityGraphic(_0_t0, t0_t, V1, V2)
+		self.HeightGraphic(_0_t0, _t0_t, H1, H2)
+		self.AccelerationGraphic(_0_t0, _t0_t, a1, a2)
+		self.VelocityGraphic(_0_t0, _t0_t, V1, V2)
 
 
 starship = Apollo11(2150, 150, 3660, 15, 950, 61, 3)
